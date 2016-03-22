@@ -76,7 +76,7 @@ DEFINE_bool(benchmark_report_aggregates_only, false,
 
 DEFINE_string(benchmark_format, "console",
               "The format to use for console output. Valid values are "
-              "'console', 'json', or 'csv'.");
+              "'console', 'json', 'csv' or 'html'.");
 
 DEFINE_string(benchmark_out_format, "json",
               "The format to use for file output. Valid values are "
@@ -90,6 +90,8 @@ DEFINE_string(benchmark_color, "auto",
               "colors if the output is being sent to a terminal and the TERM "
               "environment variable is set to a terminal type that supports "
               "colors.");
+
+DEFINE_string(benchmark_userString, "", "Additinal values, passed for reporters");
 
 DEFINE_bool(benchmark_counters_tabular, false,
             "Whether to use tabular format when printing user counters to "
@@ -535,6 +537,8 @@ std::unique_ptr<BenchmarkReporter> CreateReporter(
     return PtrType(new JSONReporter);
   } else if (name == "csv") {
     return PtrType(new CSVReporter);
+  } else if (FLAGS_benchmark_format == "html") {
+    return PtrType(new HTMLReporter(FLAGS_benchmark_userString));
   } else {
     std::cerr << "Unexpected format: '" << name << "'\n";
     std::exit(1);
@@ -643,7 +647,7 @@ void PrintUsageAndExit() {
           "          [--benchmark_min_time=<min_time>]\n"
           "          [--benchmark_repetitions=<num_repetitions>]\n"
           "          [--benchmark_report_aggregates_only={true|false}\n"
-          "          [--benchmark_format=<console|json|csv>]\n"
+          "          [--benchmark_format=<console|json|csv|html>]\n"
           "          [--benchmark_out=<filename>]\n"
           "          [--benchmark_out_format=<json|console|csv>]\n"
           "          [--benchmark_color={auto|true|false}]\n"
@@ -674,8 +678,9 @@ void ParseCommandLineFlags(int* argc, char** argv) {
         ParseStringFlag(argv[i], "color_print", &FLAGS_benchmark_color) ||
         ParseBoolFlag(argv[i], "benchmark_counters_tabular",
                         &FLAGS_benchmark_counters_tabular) ||
-        ParseInt32Flag(argv[i], "v", &FLAGS_v)) {
-      for (int j = i; j != *argc - 1; ++j) argv[j] = argv[j + 1];
+        ParseInt32Flag(argv[i], "v", &FLAGS_v) ||
+        ParseStringFlag(argv[i], "benchmark_userString", &FLAGS_benchmark_userString)) {
+      for (int j = i; j != *argc; ++j) argv[j] = argv[j + 1];
 
       --(*argc);
       --i;
@@ -685,7 +690,7 @@ void ParseCommandLineFlags(int* argc, char** argv) {
   }
   for (auto const* flag :
        {&FLAGS_benchmark_format, &FLAGS_benchmark_out_format})
-    if (*flag != "console" && *flag != "json" && *flag != "csv") {
+    if (*flag != "console" && *flag != "json" && *flag != "csv" && *flag != "html") {
       PrintUsageAndExit();
     }
   if (FLAGS_benchmark_color.empty()) {
