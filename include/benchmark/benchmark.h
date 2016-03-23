@@ -1029,9 +1029,17 @@ class BenchmarkReporter {
           complexity_n(0),
           report_big_o(false),
           report_rms(false),
-          counters() {}
+          counters()
+		  arg1(0),
+          arg2(0),
+          threads(0),
+          has_arg1(false),
+          has_arg2(false),
+          use_real_time(false),
+          multithreaded(false) {}
 
     std::string benchmark_name;
+	std::string benchmark_family;
     std::string report_label;  // Empty if not set by benchmark.
     bool error_occurred;
     std::string error_message;
@@ -1068,6 +1076,15 @@ class BenchmarkReporter {
     // Inform print function whether the current run is a complexity report
     bool report_big_o;
     bool report_rms;
+
+    int arg1;
+    int arg2;
+    int threads;
+
+    bool has_arg1;
+    bool has_arg2;
+    bool use_real_time;
+    bool multithreaded;
 
     UserCounters counters;
   };
@@ -1182,37 +1199,40 @@ class CSVReporter : public BenchmarkReporter {
 };
 
 
-class HTMLReporter : public BenchmarkReporter {
-public:
-  HTMLReporter(const std::string&);
+ass HTMLReporter : public BenchmarkReporter {
+ public:
   virtual bool ReportContext(const Context& context);
   virtual void ReportRuns(const std::vector<Run>& reports);
   virtual void Finalize();
 
-private:
-  double nanoSecondsPerItem(double itemsPerSec);
-    void determineState(const std::string&);
+  struct RunData {
+    int64_t iterations;
+    double real_time;
+    double cpu_time;
 
-  struct RunData
-  {
-      int64_t iterations;
-      double  realTime;
-      double  cpuTime;
-
-      double  bytesSecond;
-      double  itemsSecond;
-      int     range_x;
+    double bytes_second;
+    double items_second;
+    int range_x;
   };
 
-  struct BenchmarkData
-  {
-      std::string name;
-      std::vector<RunData> runData;
+  struct BenchmarkData {
+    std::string name;
+    std::vector<RunData> run_data;
   };
 
-  std::vector<BenchmarkData> benchmarkTests;
-  std::string userString;
-  int state;
+ private:
+  void WriteFile(const std::string& file) const;
+  std::string ReplaceHTMLSpecialChars(const std::string& label) const;
+
+  void PrintHTML(std::ostream& out, const std::string& html) const;
+
+  void AppendRunDataTo(std::vector<BenchmarkData> *container, const Run &data, bool is_stddev) const;
+
+  std::string context_output;
+  std::vector<BenchmarkData> benchmark_tests_line;
+  std::vector<BenchmarkData> benchmark_tests_line_stddev;
+  std::vector<BenchmarkData> benchmark_tests_bar;
+  std::vector<BenchmarkData> benchmark_tests_bar_stddev;
 };
 
 inline const char* GetTimeUnitString(TimeUnit unit) {

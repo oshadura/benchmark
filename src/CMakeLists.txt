@@ -13,6 +13,7 @@ file(GLOB
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
 add_library(benchmark ${SOURCE_FILES})
+
 set_target_properties(benchmark PROPERTIES
   OUTPUT_NAME "benchmark"
   VERSION ${GENERIC_LIB_VERSION}
