@@ -338,26 +338,38 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
         seconds = results.real_time_used;
       }
 
-      const double min_time =
-          !IsZero(b.min_time) ? b.min_time : FLAGS_benchmark_min_time;
+      const double min_time = !IsZero(b.min_time) ? b.min_time
+                                                  : FLAGS_benchmark_min_time;
 
-      // Determine if this run should be reported; Either it has
-      // run for a sufficient amount of time or because an error was reported.
-      const bool should_report =  repetition_num > 0
-        || has_explicit_iteration_count // An exact iteration count was requested
-        || results.has_error_
-        || iters >= kMaxIterations
-        || seconds >= min_time // the elapsed time is large enough
-        // CPU time is specified but the elapsed real time greatly exceeds the
-        // minimum time. Note that user provided timers are except from this
-        // sanity check.
-        || ((results.real_time_used >= 5 * min_time) && !b.use_manual_time);
+      // If this was the first run, was elapsed time or cpu time large enough?
+      // If this is not the first run, go with the current value of iter.
+      if ((i > 0) ||
+          (iters >= kMaxIterations) ||
+          (seconds >= min_time) ||
+          (real_accumulated_time >= 5*min_time)) {
+        double bytes_per_second = 0;
+        if (total.bytes_processed > 0 && seconds > 0.0) {
+          bytes_per_second = (total.bytes_processed / seconds);
+        }
+        double items_per_second = 0;
+        if (total.items_processed > 0 && seconds > 0.0) {
+          items_per_second = (total.items_processed / seconds);
+        }
 
-      if (should_report) {
-        BenchmarkReporter::Run report =
-            CreateRunReport(b, results, iters, seconds);
-        if (!report.error_occurred && b.complexity != oNone)
-          complexity_reports->push_back(report);
+        // Create report about this benchmark run.
+        BenchmarkReporter::Run report;
+        report.benchmark_name = b.name;
+        report.report_label = label;
+        // Report the total iterations across all threads.
+        report.iterations = static_cast<int64_t>(iters) * b.threads;
+        report.real_accumulated_time = real_accumulated_time;
+        report.cpu_accumulated_time = cpu_accumulated_time;
+        report.bytes_per_second = bytes_per_second;
+        report.items_per_second = items_per_second;
+        report.has_arg1 = b.has_arg1;
+        report.has_arg2 = b.has_arg2;
+        report.arg1     = b.arg1;
+        report.arg2     = b.arg2;
         reports.push_back(report);
         break;
       }
