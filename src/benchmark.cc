@@ -207,6 +207,29 @@ class ThreadTimer {
     CHECK(!running_);
     return manual_time_used_;
   }
+};
+
+// TimerManager for current run.
+static std::unique_ptr<TimerManager> timer_manager = nullptr;
+
+} // end namespace
+
+namespace internal {
+
+// Information kept per benchmark we may want to run
+struct Benchmark::Instance {
+  std::string    name;
+  std::string    family;
+  Benchmark*     benchmark;
+  bool           has_arg1;
+  int            arg1;
+  bool           has_arg2;
+  int            arg2;
+  bool           use_real_time;
+  double         min_time;
+  int            threads;    // Number of concurrent threads to use
+  bool           multithreaded;  // Is benchmark multi-threaded?
+};
 
  private:
   bool running_ = false;        // Is the timer running
@@ -220,7 +243,82 @@ class ThreadTimer {
   double manual_time_used_ = 0;
 };
 
-namespace {
+BenchmarkFamilies* BenchmarkFamilies::GetInstance() {
+  static BenchmarkFamilies instance;
+  return &instance;
+}
+
+
+size_t BenchmarkFamilies::AddBenchmark(std::unique_ptr<Benchmark> family) {
+  MutexLock l(mutex_);
+  size_t index = families_.size();
+  families_.push_back(std::move(family));
+  return index;
+}
+
+bool BenchmarkFamilies::FindBenchmarks(
+    const std::string& spec,
+    std::vector<Benchmark::Instance>* benchmarks) {
+  // Make regular expression out of command-line flag
+  std::string error_msg;
+  Regex re;
+  if (!re.Init(spec, &error_msg)) {
+    std::cerr << "Could not compile benchmark re: " << error_msg << std::endl;
+    return false;
+  }
+
+  // Special list of thread counts to use when none are specified
+  std::vector<int> one_thread;
+  one_thread.push_back(1);
+
+  MutexLock l(mutex_);
+  for (std::unique_ptr<Benchmark>& bench_family : families_) {
+    // Family was deleted or benchmark doesn't match
+    if (!bench_family) continue;
+    BenchmarkImp* family = bench_family->imp_;
+
+    if (family->arg_count_ == -1) {
+      family->arg_count_ = 0;
+      family->args_.emplace_back(-1, -1);
+    }
+    for (auto const& args : family->args_) {
+      const std::vector<int>* thread_counts =
+        (family->thread_counts_.empty()
+         ? &one_thread
+         : &family->thread_counts_);
+      for (int num_threads : *thread_counts) {
+
+        Benchmark::Instance instance;
+        instance.name = family->name_;
+        instance.family = family->name_;
+        instance.benchmark = bench_family.get();
+        instance.has_arg1 = family->arg_count_ >= 1;
+        instance.arg1 = args.first;
+        instance.has_arg2 = family->arg_count_ == 2;
+        instance.arg2 = args.second;
+        instance.min_time = family->min_time_;
+        instance.use_real_time = family->use_real_time_;
+        instance.threads = num_threads;
+        instance.multithreaded = !(family->thread_counts_.empty());
+
+        // Add arguments to instance name
+        if (family->arg_count_ >= 1) {
+          AppendHumanReadable(instance.arg1, &instance.name);
+        }
+        if (family->arg_count_ >= 2) {
+          AppendHumanReadable(instance.arg2, &instance.name);
+        }
+        if (!IsZero(family->min_time_)) {
+          instance.name +=  StringPrintF("/min_time:%0.3f",  family->min_time_);
+        }
+        if (family->use_real_time_) {
+          instance.name +=  "/real_time";
+        }
+
+        // Add the number of threads used to the name
+        if (!family->thread_counts_.empty()) {
+          instance.name += StringPrintF("/threads:%d", instance.threads);
+        }
 
 BenchmarkReporter::Run CreateRunReport(
     const benchmark::internal::Benchmark::Instance& b,
@@ -359,6 +457,7 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
         // Create report about this benchmark run.
         BenchmarkReporter::Run report;
         report.benchmark_name = b.name;
+        report.benchmark_family = b.family;
         report.report_label = label;
         // Report the total iterations across all threads.
         report.iterations = static_cast<int64_t>(iters) * b.threads;
@@ -370,6 +469,10 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
         report.has_arg2 = b.has_arg2;
         report.arg1     = b.arg1;
         report.arg2     = b.arg2;
+        report.use_real_time = b.use_real_time;
+        report.min_time = b.min_time;
+        report.threads = b.threads;
+        report.multithreaded = b.multithreaded;
         reports.push_back(report);
         break;
       }

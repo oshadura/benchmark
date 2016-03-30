@@ -1029,7 +1029,7 @@ class BenchmarkReporter {
           complexity_n(0),
           report_big_o(false),
           report_rms(false),
-          counters()
+          counters(),
 		  arg1(0),
           arg2(0),
           threads(0),
@@ -1199,7 +1199,7 @@ class CSVReporter : public BenchmarkReporter {
 };
 
 
-ass HTMLReporter : public BenchmarkReporter {
+class HTMLReporter : public BenchmarkReporter {
  public:
   virtual bool ReportContext(const Context& context);
   virtual void ReportRuns(const std::vector<Run>& reports);
