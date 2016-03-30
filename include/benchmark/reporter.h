@@ -24,4 +24,3 @@
 
 #include "benchmark.h"  // For forward declaration of BenchmarkReporter
 
-#endif  // BENCHMARK_REPORTER_H_
