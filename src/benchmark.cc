@@ -76,7 +76,11 @@ DEFINE_bool(benchmark_report_aggregates_only, false,
 
 DEFINE_string(benchmark_format, "console",
               "The format to use for console output. Valid values are "
+<<<<<<< HEAD
               "'console', 'json', 'csv' or 'html'.");
+=======
+              "'tabular', 'json', 'csv', or 'html'.");
+>>>>>>> Clean up code and clang-format
 
 DEFINE_string(benchmark_out_format, "json",
               "The format to use for file output. Valid values are "
@@ -91,6 +95,7 @@ DEFINE_string(benchmark_color, "auto",
               "environment variable is set to a terminal type that supports "
               "colors.");
 
+<<<<<<< HEAD
 DEFINE_string(benchmark_userString, "", "Additinal values, passed for reporters");
 
 DEFINE_bool(benchmark_counters_tabular, false,
@@ -99,6 +104,9 @@ DEFINE_bool(benchmark_counters_tabular, false,
             "Defaults to false.");
 
 DEFINE_int32(v, 0, "The level of verbose logging to output");
+=======
+namespace benchmark {
+>>>>>>> Clean up code and clang-format
 
 namespace benchmark {
 namespace internal {
@@ -214,29 +222,32 @@ static std::unique_ptr<TimerManager> timer_manager = nullptr;
 
 } // end namespace
 
-std::string generateInstanceName(const std::string &name, int arg_count, int arg1, int arg2, double min_time, bool use_real_time, bool multithreaded, int threads) {
-    std::string instanceName(name);
+std::string generateInstanceName(const std::string& name, int arg_count,
+                                 int arg1, int arg2, double min_time,
+                                 bool use_real_time, bool multithreaded,
+                                 int threads) {
+  std::string instanceName(name);
 
-    // Add arguments to instance name
-    if (arg_count >= 1) {
-        AppendHumanReadable(arg1, &instanceName);
-    }
-    if (arg_count >= 2) {
-        AppendHumanReadable(arg2, &instanceName);
-    }
-    if (!IsZero(min_time)) {
-        instanceName +=  StringPrintF("/min_time:%0.3f",  min_time);
-    }
-    if (use_real_time) {
-        instanceName +=  "/real_time";
-    }
+  // Add arguments to instance name
+  if (arg_count >= 1) {
+    AppendHumanReadable(arg1, &instanceName);
+  }
+  if (arg_count >= 2) {
+    AppendHumanReadable(arg2, &instanceName);
+  }
+  if (!IsZero(min_time)) {
+    instanceName += StringPrintF("/min_time:%0.3f", min_time);
+  }
+  if (use_real_time) {
+    instanceName += "/real_time";
+  }
 
-    // Add the number of threads used to the name
-    if (multithreaded) {
-        instanceName += StringPrintF("/threads:%d", threads);
-    }
+  // Add the number of threads used to the name
+  if (multithreaded) {
+    instanceName += StringPrintF("/threads:%d", threads);
+  }
 
-    return instanceName;
+  return instanceName;
 }
 
 namespace internal {
@@ -314,8 +325,10 @@ bool BenchmarkFamilies::FindBenchmarks(
       for (int num_threads : *thread_counts) {
 
         Benchmark::Instance instance;
-        //instance.name = family->name_;
-        instance.name = generateInstanceName(family->name_, family->arg_count_, args.first, args.second, family->min_time_, family->use_real_time_, !(family->thread_counts_.empty()), num_threads);
+        instance.name = generateInstanceName(
+            family->name_, family->arg_count_, args.first, args.second,
+            family->min_time_, family->use_real_time_,
+            !(family->thread_counts_.empty()), num_threads);
         instance.family = family->name_;
         instance.benchmark = bench_family.get();
         instance.has_arg1 = family->arg_count_ >= 1;
@@ -327,6 +340,7 @@ bool BenchmarkFamilies::FindBenchmarks(
         instance.threads = num_threads;
         instance.multithreaded = !(family->thread_counts_.empty());
 
+<<<<<<< HEAD
 
         // Add arguments to instance name
         /*if (family->arg_count_ >= 1) {
@@ -366,6 +380,12 @@ BenchmarkReporter::Run CreateRunReport(
     double bytes_per_second = 0;
     if (results.bytes_processed > 0 && seconds > 0.0) {
       bytes_per_second = (results.bytes_processed / seconds);
+=======
+        if (re.Match(instance.name)) {
+          benchmarks->push_back(instance);
+        }
+      }
+>>>>>>> Clean up code and clang-format
     }
     double items_per_second = 0;
     if (results.items_processed > 0 && seconds > 0.0) {
@@ -680,7 +700,7 @@ std::unique_ptr<BenchmarkReporter> CreateReporter(
   } else if (name == "csv") {
     return PtrType(new CSVReporter);
   } else if (FLAGS_benchmark_format == "html") {
-    return PtrType(new HTMLReporter(FLAGS_benchmark_userString));
+    return PtrType(new HTMLReporter());
   } else {
     std::cerr << "Unexpected format: '" << name << "'\n";
     std::exit(1);
