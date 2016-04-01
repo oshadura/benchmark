@@ -54,6 +54,8 @@ write_basic_package_version_file(
 )
 
 configure_file("${PROJECT_SOURCE_DIR}/cmake/Config.cmake.in" "${project_config}" @ONLY)
+# Expose public API
+target_include_directories(benchmark PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/include)
 
 # Install target (will install the library to specified CMAKE_INSTALL_PREFIX variable)
 install(
