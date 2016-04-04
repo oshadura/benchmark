@@ -79,3 +79,10 @@ install(
     EXPORT "${targets_export_name}"
     NAMESPACE "${namespace}"
     DESTINATION "${config_install_dir}")
+  
+if(BENCHMARK_DOWNLOAD_JS)
+    install(
+    DIRECTORY "${PROJECT_BINARY_DIR}/include/benchmark"
+    DESTINATION "share"
+    FILES_MATCHING PATTERN "*.js")
+endif()
