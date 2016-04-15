@@ -33,6 +33,7 @@
 #include <memory>
 #include <thread>
 
+#include "benchmark_util.h"
 #include "check.h"
 #include "colorprint.h"
 #include "commandlineflags.h"
@@ -76,11 +77,7 @@ DEFINE_bool(benchmark_report_aggregates_only, false,
 
 DEFINE_string(benchmark_format, "console",
               "The format to use for console output. Valid values are "
-<<<<<<< HEAD
               "'console', 'json', 'csv' or 'html'.");
-=======
-              "'tabular', 'json', 'csv', or 'html'.");
->>>>>>> Clean up code and clang-format
 
 DEFINE_string(benchmark_out_format, "json",
               "The format to use for file output. Valid values are "
@@ -95,7 +92,6 @@ DEFINE_string(benchmark_color, "auto",
               "environment variable is set to a terminal type that supports "
               "colors.");
 
-<<<<<<< HEAD
 DEFINE_string(benchmark_userString, "", "Additinal values, passed for reporters");
 
 DEFINE_bool(benchmark_counters_tabular, false,
@@ -104,9 +100,6 @@ DEFINE_bool(benchmark_counters_tabular, false,
             "Defaults to false.");
 
 DEFINE_int32(v, 0, "The level of verbose logging to output");
-=======
-namespace benchmark {
->>>>>>> Clean up code and clang-format
 
 namespace benchmark {
 namespace internal {
