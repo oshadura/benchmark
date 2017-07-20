@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "benchmark_util.h"
 #include "benchmark/benchmark.h"
 #include "benchmark_api_internal.h"
 #include "internal_macros.h"
@@ -146,7 +147,12 @@ bool BenchmarkFamilies::FindBenchmarks(
     for (auto const& args : family->args_) {
       for (int num_threads : *thread_counts) {
         Benchmark::Instance instance;
-        instance.name = family->name_;
+        /*instance.name = GenerateInstanceName(
+            family->name_, family->arg_count_, args.first, args.second,
+            family->min_time_, family->use_real_time_,
+            !(family->thread_counts_.empty()), num_threads);
+        */
+        instance.family = family->name_;
         instance.benchmark = family.get();
         instance.report_mode = family->report_mode_;
         instance.arg = args;

@@ -1030,7 +1030,8 @@ class BenchmarkReporter {
           report_big_o(false),
           report_rms(false),
           counters(),
-		  arg1(0),
+          min_time(0.0),
+          arg1(0),
           arg2(0),
           threads(0),
           has_arg1(false),
@@ -1039,7 +1040,7 @@ class BenchmarkReporter {
           multithreaded(false) {}
 
     std::string benchmark_name;
-	std::string benchmark_family;
+    std::string benchmark_family;
     std::string report_label;  // Empty if not set by benchmark.
     bool error_occurred;
     std::string error_message;
@@ -1076,16 +1077,14 @@ class BenchmarkReporter {
     // Inform print function whether the current run is a complexity report
     bool report_big_o;
     bool report_rms;
-
+    double min_time;
     int arg1;
     int arg2;
     int threads;
-
     bool has_arg1;
     bool has_arg2;
     bool use_real_time;
     bool multithreaded;
-
     UserCounters counters;
   };
 

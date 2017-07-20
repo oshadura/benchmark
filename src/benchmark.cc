@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "benchmark_util.h"
 #include "benchmark/benchmark.h"
 #include "benchmark_api_internal.h"
 #include "internal_macros.h"
@@ -33,7 +34,6 @@
 #include <memory>
 #include <thread>
 
-#include "benchmark_util.h"
 #include "check.h"
 #include "colorprint.h"
 #include "commandlineflags.h"
@@ -77,11 +77,11 @@ DEFINE_bool(benchmark_report_aggregates_only, false,
 
 DEFINE_string(benchmark_format, "console",
               "The format to use for console output. Valid values are "
-              "'console', 'json', 'csv' or 'html'.");
+              "'console', 'json', or 'csv' or 'html'.");
 
 DEFINE_string(benchmark_out_format, "json",
               "The format to use for file output. Valid values are "
-              "'console', 'json', or 'csv'.");
+              "'console', 'json', or 'csv' or 'html'.");
 
 DEFINE_string(benchmark_out, "", "The file to write additonal output to");
 
@@ -91,8 +91,6 @@ DEFINE_string(benchmark_color, "auto",
               "colors if the output is being sent to a terminal and the TERM "
               "environment variable is set to a terminal type that supports "
               "colors.");
-
-DEFINE_string(benchmark_userString, "", "Additinal values, passed for reporters");
 
 DEFINE_bool(benchmark_counters_tabular, false,
             "Whether to use tabular format when printing user counters to "
@@ -208,29 +206,6 @@ class ThreadTimer {
     CHECK(!running_);
     return manual_time_used_;
   }
-};
-
-// TimerManager for current run.
-static std::unique_ptr<TimerManager> timer_manager = nullptr;
-
-} // end namespace
-
-namespace internal {
-
-// Information kept per benchmark we may want to run
-struct Benchmark::Instance {
-  std::string    name;
-  std::string    family;
-  Benchmark*     benchmark;
-  bool           has_arg1;
-  int            arg1;
-  bool           has_arg2;
-  int            arg2;
-  bool           use_real_time;
-  double         min_time;
-  int            threads;    // Number of concurrent threads to use
-  bool           multithreaded;  // Is benchmark multi-threaded?
-};
 
  private:
   bool running_ = false;        // Is the timer running
@@ -244,87 +219,7 @@ struct Benchmark::Instance {
   double manual_time_used_ = 0;
 };
 
-BenchmarkFamilies* BenchmarkFamilies::GetInstance() {
-  static BenchmarkFamilies instance;
-  return &instance;
-}
-
-
-size_t BenchmarkFamilies::AddBenchmark(std::unique_ptr<Benchmark> family) {
-  MutexLock l(mutex_);
-  size_t index = families_.size();
-  families_.push_back(std::move(family));
-  return index;
-}
-
-bool BenchmarkFamilies::FindBenchmarks(
-    const std::string& spec,
-    std::vector<Benchmark::Instance>* benchmarks) {
-  // Make regular expression out of command-line flag
-  std::string error_msg;
-  Regex re;
-  if (!re.Init(spec, &error_msg)) {
-    std::cerr << "Could not compile benchmark re: " << error_msg << std::endl;
-    return false;
-  }
-
-  // Special list of thread counts to use when none are specified
-  std::vector<int> one_thread;
-  one_thread.push_back(1);
-
-  MutexLock l(mutex_);
-  for (std::unique_ptr<Benchmark>& bench_family : families_) {
-    // Family was deleted or benchmark doesn't match
-    if (!bench_family) continue;
-    BenchmarkImp* family = bench_family->imp_;
-
-    if (family->arg_count_ == -1) {
-      family->arg_count_ = 0;
-      family->args_.emplace_back(-1, -1);
-    }
-    for (auto const& args : family->args_) {
-      const std::vector<int>* thread_counts =
-        (family->thread_counts_.empty()
-         ? &one_thread
-         : &family->thread_counts_);
-      for (int num_threads : *thread_counts) {
-
-        Benchmark::Instance instance;
-        instance.name = GenerateInstanceName(
-            family->name_, family->arg_count_, args.first, args.second,
-            family->min_time_, family->use_real_time_,
-            !(family->thread_counts_.empty()), num_threads);
-        instance.family = family->name_;
-        instance.benchmark = bench_family.get();
-        instance.has_arg1 = family->arg_count_ >= 1;
-        instance.arg1 = args.first;
-        instance.has_arg2 = family->arg_count_ == 2;
-        instance.arg2 = args.second;
-        instance.min_time = family->min_time_;
-        instance.use_real_time = family->use_real_time_;
-        instance.threads = num_threads;
-        instance.multithreaded = !(family->thread_counts_.empty());
-
-<<<<<<< HEAD
-
-        // Add arguments to instance name
-        /*if (family->arg_count_ >= 1) {
-          AppendHumanReadable(instance.arg1, &instance.name);
-        }
-        if (family->arg_count_ >= 2) {
-          AppendHumanReadable(instance.arg2, &instance.name);
-        }
-        if (!IsZero(family->min_time_)) {
-          instance.name +=  StringPrintF("/min_time:%0.3f",  family->min_time_);
-        }
-        if (family->use_real_time_) {
-          instance.name +=  "/real_time";
-        }
-
-        // Add the number of threads used to the name
-        if (!family->thread_counts_.empty()) {
-          instance.name += StringPrintF("/threads:%d", instance.threads);
-        }*/
+namespace {
 
 BenchmarkReporter::Run CreateRunReport(
     const benchmark::internal::Benchmark::Instance& b,
@@ -334,6 +229,7 @@ BenchmarkReporter::Run CreateRunReport(
   BenchmarkReporter::Run report;
 
   report.benchmark_name = b.name;
+  report.benchmark_family = b.family;
   report.error_occurred = results.has_error_;
   report.error_message = results.error_message_;
   report.report_label = results.report_label_;
@@ -345,12 +241,6 @@ BenchmarkReporter::Run CreateRunReport(
     double bytes_per_second = 0;
     if (results.bytes_processed > 0 && seconds > 0.0) {
       bytes_per_second = (results.bytes_processed / seconds);
-=======
-        if (re.Match(instance.name)) {
-          benchmarks->push_back(instance);
-        }
-      }
->>>>>>> Clean up code and clang-format
     }
     double items_per_second = 0;
     if (results.items_processed > 0 && seconds > 0.0) {
@@ -365,6 +255,16 @@ BenchmarkReporter::Run CreateRunReport(
     report.cpu_accumulated_time = results.cpu_time_used;
     report.bytes_per_second = bytes_per_second;
     report.items_per_second = items_per_second;
+    /*
+    report.has_arg1 = b.has_arg1;
+    report.has_arg2 = b.has_arg2;
+    report.arg1     = b.arg1;
+    report.arg2     = b.arg2;
+    report.use_real_time = b.use_real_time;
+    report.min_time = b.min_time;
+    report.threads = b.threads;
+    report.multithreaded = b.multithreaded;
+    */
     report.complexity_n = results.complexity_n;
     report.complexity = b.complexity;
     report.complexity_lambda = b.complexity_lambda;
@@ -448,43 +348,26 @@ std::vector<BenchmarkReporter::Run> RunBenchmark(
         seconds = results.real_time_used;
       }
 
-      const double min_time = !IsZero(b.min_time) ? b.min_time
-                                                  : FLAGS_benchmark_min_time;
+      const double min_time =
+          !IsZero(b.min_time) ? b.min_time : FLAGS_benchmark_min_time;
 
-      // If this was the first run, was elapsed time or cpu time large enough?
-      // If this is not the first run, go with the current value of iter.
-      if ((i > 0) ||
-          (iters >= kMaxIterations) ||
-          (seconds >= min_time) ||
-          (real_accumulated_time >= 5*min_time)) {
-        double bytes_per_second = 0;
-        if (total.bytes_processed > 0 && seconds > 0.0) {
-          bytes_per_second = (total.bytes_processed / seconds);
-        }
-        double items_per_second = 0;
-        if (total.items_processed > 0 && seconds > 0.0) {
-          items_per_second = (total.items_processed / seconds);
-        }
+      // Determine if this run should be reported; Either it has
+      // run for a sufficient amount of time or because an error was reported.
+      const bool should_report =  repetition_num > 0
+        || has_explicit_iteration_count // An exact iteration count was requested
+        || results.has_error_
+        || iters >= kMaxIterations
+        || seconds >= min_time // the elapsed time is large enough
+        // CPU time is specified but the elapsed real time greatly exceeds the
+        // minimum time. Note that user provided timers are except from this
+        // sanity check.
+        || ((results.real_time_used >= 5 * min_time) && !b.use_manual_time);
 
-        // Create report about this benchmark run.
-        BenchmarkReporter::Run report;
-        report.benchmark_name = b.name;
-        report.benchmark_family = b.family;
-        report.report_label = label;
-        // Report the total iterations across all threads.
-        report.iterations = static_cast<int64_t>(iters) * b.threads;
-        report.real_accumulated_time = real_accumulated_time;
-        report.cpu_accumulated_time = cpu_accumulated_time;
-        report.bytes_per_second = bytes_per_second;
-        report.items_per_second = items_per_second;
-        report.has_arg1 = b.has_arg1;
-        report.has_arg2 = b.has_arg2;
-        report.arg1     = b.arg1;
-        report.arg2     = b.arg2;
-        report.use_real_time = b.use_real_time;
-        report.min_time = b.min_time;
-        report.threads = b.threads;
-        report.multithreaded = b.multithreaded;
+      if (should_report) {
+        BenchmarkReporter::Run report =
+            CreateRunReport(b, results, iters, seconds);
+        if (!report.error_occurred && b.complexity != oNone)
+          complexity_reports->push_back(report);
         reports.push_back(report);
         break;
       }
@@ -664,8 +547,8 @@ std::unique_ptr<BenchmarkReporter> CreateReporter(
     return PtrType(new JSONReporter);
   } else if (name == "csv") {
     return PtrType(new CSVReporter);
-  } else if (FLAGS_benchmark_format == "html") {
-    return PtrType(new HTMLReporter());
+  } else if (name == "html") {
+    return PtrType(new HTMLReporter);
   } else {
     std::cerr << "Unexpected format: '" << name << "'\n";
     std::exit(1);
@@ -673,10 +556,6 @@ std::unique_ptr<BenchmarkReporter> CreateReporter(
 }
 
 }  // end namespace
-
-bool IsZero(double n) {
-  return std::abs(n) < std::numeric_limits<double>::epsilon();
-}
 
 ConsoleReporter::OutputOptions GetOutputOptions(bool force_no_color) {
   int output_opts = ConsoleReporter::OO_Defaults;
@@ -805,9 +684,8 @@ void ParseCommandLineFlags(int* argc, char** argv) {
         ParseStringFlag(argv[i], "color_print", &FLAGS_benchmark_color) ||
         ParseBoolFlag(argv[i], "benchmark_counters_tabular",
                         &FLAGS_benchmark_counters_tabular) ||
-        ParseInt32Flag(argv[i], "v", &FLAGS_v) ||
-        ParseStringFlag(argv[i], "benchmark_userString", &FLAGS_benchmark_userString)) {
-      for (int j = i; j != *argc; ++j) argv[j] = argv[j + 1];
+        ParseInt32Flag(argv[i], "v", &FLAGS_v)) {
+      for (int j = i; j != *argc - 1; ++j) argv[j] = argv[j + 1];
 
       --(*argc);
       --i;
@@ -845,3 +723,4 @@ bool ReportUnrecognizedArguments(int argc, char** argv) {
 }
 
 }  // end namespace benchmark
+

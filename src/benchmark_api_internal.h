@@ -2,6 +2,7 @@
 #define BENCHMARK_API_INTERNAL_H
 
 #include "benchmark/benchmark.h"
+#include "benchmark_util.h"
 
 #include <cmath>
 #include <iosfwd>
@@ -15,6 +16,7 @@ namespace internal {
 // Information kept per benchmark we may want to run
 struct Benchmark::Instance {
   std::string name;
+  std::string family;
   Benchmark* benchmark;
   ReportMode report_mode;
   std::vector<int> arg;
@@ -36,7 +38,7 @@ bool FindBenchmarksInternal(const std::string& re,
                             std::vector<Benchmark::Instance>* benchmarks,
                             std::ostream* Err);
 
-bool IsZero(double n);
+//bool IsZero(double n);
 
 ConsoleReporter::OutputOptions GetOutputOptions(bool force_no_color = false);
 

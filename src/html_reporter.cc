@@ -1,4 +1,5 @@
 #include "benchmark/reporter.h"
+#include "complexity.h"
 
 #include <algorithm>
 #include <array>
@@ -10,7 +11,7 @@
 #include <vector>
 
 #include "benchmark_util.h"
-#include "walltime.h"
+#include "timers.h"
 
 static const char *const benchmark_titles[4] = {
     "CPU time", "Items per second", "Real time", "Bytes per second"};
@@ -366,7 +367,7 @@ void HTMLReporter::ReportRuns(std::vector<Run> const &reports) {
 
   if (reports.size() >= 2) {
     Run stddev_data = reports[0];
-    BenchmarkReporter::ComputeStats(reports, &report_data, &stddev_data);
+    ComputeStats(reports);
 
     AppendRunDataTo(benchmark_tests_stddev, stddev_data, true);
   }
